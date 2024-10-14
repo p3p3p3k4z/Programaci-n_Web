@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor IEEE 754 y Otras Bases</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-image: url('imagen/gatos.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #fff;
+        }
+    
+        h1 {
+            font-size: 36px;
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+    
+        form {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    
+        input[type="text"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            margin-right: 10px;
+            font-size: 16px;
+        }
+    
+        input[type="button"] {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+    
+        input[type="button"]:hover {
+            background-color: #5907d5;
+        }
+    
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: rgba(255, 255, 255, 0.8); /* Fondo de las tablas semitransparente */
+        }
+    
+        th, td {
+            padding: 12px;
+            border: 1px solid #ccc;
+            text-align: center;
+            color: #333;
+        }
+    
+        th {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+        }
+    
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #000;
+        }
+    
+        .bit-display input {
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            border: 2px solid #ccc;
+            background-color: #fff;
+            font-weight: bold;
+            margin: 2px;
+            border-radius: 5px;
+        }
+    
+        .sign-exponent-fraccion {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            text-align: center;
+        }
+    </style>
+    
+    <script>
+        function convertir() {
+            let valor = parseFloat(document.getElementById("valor").value);
+            if (isNaN(valor)) {
+                alert("Por favor, ingrese un número válido.");
+                return;
+            }
+
+            // Mostrar la parte entera
+            let parteEntera = Math.floor(valor);
+            let resultadosEnteros = document.getElementById("parteEnteraResultados");
+            resultadosEnteros.innerHTML = generarTablaParteEntera(parteEntera);
+
+            // Mostrar la parte fraccionaria
+            let parteFraccionaria = valor - parteEntera;
+            let resultadosFraccionarios = document.getElementById("parteFraccionariaResultados");
+            resultadosFraccionarios.innerHTML = generarTablaParteFraccionaria(parteFraccionaria);
+
+            mostrarIEEE754(valor);
+        }
+
+        // Generar la tabla para la conversión de la parte entera
+        function generarTablaParteEntera(parteEntera) {
+            let divisor = 2;
+            let resultadoHTML = "<tr><th>Valor</th><th>Divisor</th><th>Cociente</th><th>Residuo</th></tr>";
+            let valorActual = parteEntera;
+
+            while (valorActual > 0) {
+                let cociente = Math.floor(valorActual / divisor);
+                let residuo = valorActual % divisor;
+                resultadoHTML += `<tr><td>${valorActual}</td><td>${divisor}</td><td>${cociente}</td><td>${residuo}</td></tr>`;
+                valorActual = cociente;
+            }
+
+            return resultadoHTML;
+        }
+
+        // Generar la tabla para la conversión de la parte fraccionaria
+        function generarTablaParteFraccionaria(parteFraccionaria) {
+            let multiplicador = 2;
+            let resultadoHTML = "<tr><th>Valor</th><th>Multiplicador</th><th>Producto</th><th>Dígito</th></tr>";
+            let valorActual = parteFraccionaria;
+            
+            // Mostrar solo los primeros 5 pasos para mantener la tabla limpia
+            for (let i = 0; i < 5; i++) {
+                let producto = valorActual * multiplicador;
+                let digito = Math.floor(producto);
+                resultadoHTML += `<tr><td>${valorActual.toFixed(15)}</td><td>${multiplicador}</td><td>${producto.toFixed(15)}</td><td>${digito}</td></tr>`;
+                valorActual = producto - digito;
+            }
+
+            return resultadoHTML;
+        }
+
+        // Función para mostrar la tabla IEEE 754 (signo, exponente y fracción)
+        function mostrarIEEE754(valor) {
+            let buffer = new ArrayBuffer(4);  // 4 bytes para IEEE 754 de 32 bits
+            let view = new DataView(buffer);
+            view.setFloat32(0, valor);
+
+            // Convertir cada byte a binario
+            let binarioIEEE754 = '';
+            for (let i = 0; i < 4; i++) {
+                binarioIEEE754 += view.getUint8(i).toString(2).padStart(8, '0');
+            }
+
+            // Separar el signo, exponente y fracción
+            let signo = binarioIEEE754[0]; // Primer bit es el signo
+            let exponente = binarioIEEE754.slice(1, 9); // Los siguientes 8 bits son el exponente
+            let fraccion = binarioIEEE754.slice(9); // Los siguientes 23 bits son la fracción
+
+            // Calcular el exponente + 127 y otros detalles
+            let exponenteValor = parseInt(exponente, 2);
+            let exponenteDecodificado = exponenteValor - 127;
+
+            // Mostrar los bits en casillas
+            mostrarBits(signo, exponente, fraccion);
+
+            document.getElementById("signo").innerText = signo === "0" ? "+" : "-";
+            document.getElementById("exponente").innerText = `${exponenteValor} = ${exponenteDecodificado} + 127`;
+            document.getElementById("fraccion").innerText = fraccion;
+            document.getElementById("resultadoIEEE754").innerText = binarioIEEE754;
+        }
+
+        // Función para mostrar los bits como casillas iluminadas
+        function mostrarBits(signo, exponente, fraccion) {
+            let signoDisplay = document.getElementById("signoDisplay");
+            let exponenteDisplay = document.getElementById("exponenteDisplay");
+            let fraccionDisplay = document.getElementById("fraccionDisplay");
+
+            // Limpiar displays
+            signoDisplay.innerHTML = "";
+            exponenteDisplay.innerHTML = "";
+            fraccionDisplay.innerHTML = "";
+
+            // Mostrar el bit del signo
+            signoDisplay.innerHTML += `<input type="text" value="${signo}" disabled>`;
+
+            // Mostrar los bits del exponente
+            for (let i = 0; i < exponente.length; i++) {
+                exponenteDisplay.innerHTML += `<input type="text" value="${exponente[i]}" disabled>`;
+            }
+
+            // Mostrar los bits de la fracción
+            for (let i = 0; i < fraccion.length; i++) {
+                fraccionDisplay.innerHTML += `<input type="text" value="${fraccion[i]}" disabled>`;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Representación interna de números de Punto flotante IEEE 754</h1>
+    <div>
+        <form>
+            <input type="text" id="valor" placeholder="Ej. 10.1">
+            <input type="button" value="Convertir" onclick="convertir()">
+        </form>
+    </div>
+
+    <h2>Parte Entera</h2>
+    <table id="parteEnteraResultados">
+    </table>
+
+    <h2>Parte Fraccionaria</h2>
+    <table id="parteFraccionariaResultados">
+    </table>
+
+    <div class="sign-exponent-fraccion">
+        <div>
+            <h3>Signo</h3>
+            <div id="signo"></div>
+            <div id="signoDisplay" class="bit-display"></div>
+        </div>
+        <div>
+            <h3>Exponente + 127</h3>
+            <div id="exponente"></div>
+            <div id="exponenteDisplay" class="bit-display"></div>
+        </div>
+        <div>
+            <h3>Fracción</h3>
+            <div id="fraccion"></div>
+            <div id="fraccionDisplay" class="bit-display"></div>
+        </div>
+    </div>
+
+    <h2>IEEE 754 (32 bits)</h2>
+    <div class="result" id="resultadoIEEE754">
+    </div>
+</body>
+</html>
